@@ -158,9 +158,9 @@ def reset_db():
     conn.close()
     st.write("Base de données réinitialisée!")
 
-# # Interface Streamlit
-# if st.button("Réinitialiser la base de données"):
-#     reset_db()
+# Interface Streamlit
+if st.button("Réinitialiser la base de données"):
+    reset_db()
 
 # Afficher les données de la base dans l'application Streamlit
 def show_db_data():
