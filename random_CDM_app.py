@@ -171,6 +171,6 @@ def show_db_data():
     for emp in data:
         st.write(f"{emp['id']} | {emp['nom']} | {emp['grade']} | {emp['poids']} | {emp['selection_count']}")
 
-# # Interface Streamlit
-# if st.button("Afficher l'état de la base de données"):
-#     show_db_data()
+# Interface Streamlit
+if st.button("Afficher l'état de la base de données"):
+    show_db_data()
