@@ -7,7 +7,7 @@ st.title("🎈 Binôme de CDM pour le mois")
 
 # Connexion à la base de données SQLite (le fichier sera créé s'il n'existe pas)
 def create_connection():
-    conn = sqlite3.connect('/workspaces/randomCDM-app/cdm.db')
+    conn = sqlite3.connect('cdm.db')
     return conn
 
 # Créer la table si elle n'existe pas déjà
