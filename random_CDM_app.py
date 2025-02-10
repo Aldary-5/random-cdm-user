@@ -114,60 +114,12 @@ def save_data(data):
     conn.commit()
     conn.close()
 
-
-
-def select_cdm(cdm):
-    # 🔎 Vérifier si tous les CDM ont un ordre de passage défini (> 0)
-    if all(emp["ordre_passage"] > 0 for emp in cdm) and all(emp["selection_count"] == 1 for emp in cdm):
-        # 🔄 Réinitialiser toutes les sélections à 0
-        max_order_selected = 0
-        for emp in cdm:
-            emp["selection_count"] = 0
-    
-    if all(emp["ordre_passage"] > 0 for emp in cdm):   
-        selected_once = [emp for emp in cdm if emp["selection_count"] == 1]
-
-        if len(selected_once) != 0:
-            # 🔝 Prendre l'ordre de passage le plus élevé parmi ceux déjà sélectionnés
-            max_order_selected = max(emp["ordre_passage"] for emp in selected_once)
-            next_order = max_order_selected + 1
-
-            # 🔄 Sélectionner le binôme qui a cet ordre de passage
-            selected_cdm = [emp for emp in cdm if emp["ordre_passage"] == next_order]
-
-            if len(selected_cdm) != 2:
-                raise ValueError("Erreur : il doit y avoir exactement 2 noms avec le même ordre de passage.")
-
-            # 🔼 Incrémenter le compteur de sélection pour les deux
-            for emp in selected_cdm:
-                emp["selection_count"] += 1
-
-            # Sauvegarde des modifications
-            save_data(cdm)
-            return selected_cdm
-        
-        # si on revient au début de la liste 
-        else : 
-            next_order = max_order_selected + 1
-            # 🔄 Sélectionner le binôme qui a cet ordre de passage
-            selected_cdm = [emp for emp in cdm if emp["ordre_passage"] == next_order]
-            # 🔼 Incrémenter le compteur de sélection pour les deux
-            for emp in selected_cdm:
-                emp["selection_count"] += 1
-            # Sauvegarde des modifications
-            save_data(cdm)
-            return selected_cdm
-
-    # 1️⃣ Trouver les CDM qui n'ont pas encore été sélectionnés
-    non_selected = [emp for emp in cdm if emp["selection_count"] == 0]
-
-    # 2️⃣ Cas particulier : il ne reste qu'un seul CDM non sélectionné
-    if len(non_selected) == 1:
-        # 🔄 Réinitialiser toutes les sélections à 0
+def decaler_passage(cdm, last_cdm) :
+    # 🔄 Réinitialiser toutes les sélections à 0
         for emp in cdm:
             emp["selection_count"] = 0
 
-        last_cdm = non_selected[0]
+        last_cdm = last_cdm[0]
         last_cdm["selection_count"] += 1  # On l'ajoute directement
         selected_cdm = [last_cdm]
 
@@ -208,20 +160,101 @@ def select_cdm(cdm):
         non_selected_binome_premier = [emp for emp in binome_order_1 if emp != selected_binome][0]
         non_selected_binome_premier["ordre_passage"] += 1
 
+
+        save_data(cdm)
+        return selected_cdm
+
+
+def select_cdm(cdm):
+    # 🔎 Vérifier si tous les CDM ont un ordre de passage défini (> 0)
+    if all(emp["ordre_passage"] > 0 for emp in cdm) and all(emp["selection_count"] == 1 for emp in cdm):
+        # 🔄 Réinitialiser toutes les sélections à 0
+        max_order_selected = 0
+        for emp in cdm:
+            emp["selection_count"] = 0
+    
+    if all(emp["ordre_passage"] > 0 for emp in cdm):   
+
+        selected_once = [emp for emp in cdm if emp["selection_count"] == 1]
+
+        if len(selected_once) != 0:
+            # 🔝 Prendre l'ordre de passage le plus élevé parmi ceux déjà sélectionnés
+            max_order_selected = max(emp["ordre_passage"] for emp in selected_once)
+            next_order = max_order_selected + 1
+
+            # 🔄 Sélectionner le binôme qui a cet ordre de passage
+            selected_cdm = [emp for emp in cdm if emp["ordre_passage"] == next_order]
+
+            # Si il n'y a qu'un seul nom pour le prochain ordre de passage
+            if len(selected_cdm) == 1 : 
+                selected_cdm = decaler_passage(cdm, selected_cdm)
+                return selected_cdm 
+            
+            else : 
+                if len(selected_cdm) != 2:
+                    raise ValueError("Erreur : il doit y avoir exactement 2 noms avec le même ordre de passage.")
+
+                # 🔼 Incrémenter le compteur de sélection pour les deux
+                for emp in selected_cdm:
+                    emp["selection_count"] += 1
+
+                # Sauvegarde des modifications
+                save_data(cdm)
+                return selected_cdm
+        
+        # si on revient au début de la liste 
+        else : 
+            next_order = max_order_selected + 1
+            # 🔄 Sélectionner le binôme qui a cet ordre de passage
+            selected_cdm = [emp for emp in cdm if emp["ordre_passage"] == next_order]
+            # 🔼 Incrémenter le compteur de sélection pour les deux
+            for emp in selected_cdm:
+                emp["selection_count"] += 1
+            # Sauvegarde des modifications
+            save_data(cdm)
+            return selected_cdm
+
+    # 1️⃣ Trouver les CDM qui n'ont pas encore été sélectionnés
+    non_selected = [emp for emp in cdm if emp["selection_count"] == 0]
+
+    # 2️⃣ Cas particulier : il ne reste qu'un seul CDM non sélectionné
+    if len(non_selected) == 1:
+        # Appel de la fonction pour décaler les binômes 
+        selected_cdm = decaler_passage(cdm, non_selected)
+        return selected_cdm
+
     else:
         # 6️⃣ Sélection classique si plusieurs CDM n'ont pas encore été sélectionnés
         candidates = [emp for emp in cdm if emp["ordre_passage"] == 0]
         candidates.sort(key=lambda x: x["poids"], reverse=True)
 
         if len(candidates) >= 2:
-            selected_cdm = random.sample(candidates, 2)
+            # Identifier le poids maximum parmi les candidats
+            max_weight = candidates[0]["poids"]
+            # Sélectionner tous les candidats ayant ce poids maximal
+            top_candidates = [emp for emp in candidates if emp["poids"] == max_weight]
+            
+            if len(top_candidates) >= 2:
+                # S'il y a au moins deux CDM avec le poids maximal, on en choisit aléatoirement deux
+                selected_cdm = random.sample(top_candidates, 2)
+            elif len(top_candidates) == 1:
+                # Sinon, on conserve le CDM avec le poids maximal et on choisit un autre parmi le reste
+                first = top_candidates[0]
+                remaining = [emp for emp in candidates if emp != first]
+                second = random.choice(remaining)
+                selected_cdm = [first, second]
+            else : 
+                remaining = [emp for emp in candidates if emp != first]
+                selected_cdm = random.sample(remaining, 2)
+
+            # Déterminer le prochain numéro d'ordre de passage
             max_order = max(emp["ordre_passage"] for emp in cdm) if cdm else 0
             new_order = max_order + 1
 
+            # Appliquer le même ordre de passage aux 2 CDM sélectionnés et incrémenter leur compteur
             for emp in selected_cdm:
                 emp["ordre_passage"] = new_order
                 emp["selection_count"] += 1
-
         else:
             selected_cdm = []
 
@@ -334,12 +367,52 @@ with col1:
     if st.button("🔄 Réinitialiser la base de données"):
         reset_db()
 
+# Fonction pour supprimer un CDM
+def delete_cdm_by_name(cdm, nom):
+    conn = create_connection()  # Assure-toi que create_connection() est défini et fonctionne
+    cursor = conn.cursor()
+
+    # Récupérer l'ordre de passage du CDM correspondant au nom
+    cursor.execute("SELECT ordre_passage FROM cdm WHERE nom = ?", (nom,))
+    odp = cursor.fetchone()
+    
+    if odp is None:
+        print(f"Aucun CDM avec le nom {nom} n'a été trouvé.")
+        conn.close()
+        return None
+    
+    ordre_passage = odp[0]
+    binome = [emp for emp in cdm if emp["ordre_passage"] == ordre_passage + 1 ]
+    binome_decale = None
+
+    while ordre_passage <= max(emp["ordre_passage"] for emp in cdm):
+            binome_next = [emp for emp in cdm if emp["ordre_passage"] == ordre_passage]
+
+            if binome_decale is not None :
+                binome_decale["ordre_passage"] -= 1
+
+            if len(binome_next) != 2:
+                break  # Fin du décalage
+
+            selected_binome = random.choice(binome_next)
+            non_selected_binome = [emp for emp in binome_next if emp != selected_binome][0]
+            binome_decale = non_selected_binome
+
+            ordre_passage += 1
+    
+    save_data(cdm)
+
+    cursor.execute("DELETE FROM cdm WHERE nom = ?", (nom,))
+    conn.commit()
+    conn.close()
+    print(f"{nom} a été supprimée de la liste des CDM.")
+
 # --- Bouton pour afficher/masquer le formulaire d'ajout d'un cdm ---
 with col2:
     if "show_add_form" not in st.session_state:
         st.session_state.show_add_form = False
 
-    if st.button("Ajouter un cdm"):
+    if st.button("Ajouter un CDM"):
         # Inverse l'état du formulaire (affiche s'il est masqué, le masque s'il est affiché)
         st.session_state.show_add_form = not st.session_state.show_add_form
 
@@ -361,5 +434,33 @@ with col2:
                 st.success(f"CDM {name_input} ajouté avec ordre de passage {ordre_passage}")
                 # Une fois l'ajout effectué, on peut masquer le formulaire
                 st.session_state.show_add_form = False
+            else:
+                st.error("Veuillez remplir tous les champs.")
+    
+    # Bouton pour supprimer un CDM
+    if "show_add_form_suppr" not in st.session_state:
+        st.session_state.show_add_form_suppr = False
+
+    if st.button("Supprimer un CDM"):
+        # Inverse l'état du formulaire (affiche s'il est masqué, le masque s'il est affiché)
+        st.session_state.show_add_form_suppr = not st.session_state.show_add_form_suppr
+
+    # Afficher le formulaire uniquement si show_add_form est True
+    if st.session_state.show_add_form_suppr:
+        # Message d'avertissement en rouge avec une icône warning
+        st.markdown(
+            "<span style='color: red; font-weight: bold;'>⚠️ Attention : la suppression bousculera tout l'ordre, soyez sûr avant de cliquer !</span>",
+            unsafe_allow_html=True,
+        )
+        with st.form(key="add_employee_form_suppr"):
+            name_input = st.text_input("Nom du CDM")
+            submit_button = st.form_submit_button(label="Supprimer le CDM")
+        if submit_button:
+            if name_input :
+                cdm_data = load_data()
+                delete_cdm_by_name(cdm_data, name_input)
+                st.success(f"{name_input} a été supprimé(e) de la liste des CDM")
+                # Une fois l'ajout effectué, on peut masquer le formulaire
+                st.session_state.show_add_form_suppr = False
             else:
                 st.error("Veuillez remplir tous les champs.")
