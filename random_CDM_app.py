@@ -164,14 +164,54 @@ def decaler_passage(cdm, last_cdm) :
         save_data(cdm)
         return selected_cdm
 
+def verify_and_adjust_binomes(cdm):
+    """
+    Cette fonction vérifie que chaque ordre de passage (sauf le maximum) est associé à exactement 2 CDM.
+    Si ce n'est pas le cas, elle décale aléatoirement des CDM vers l'ordre de passage suivant,
+    de sorte que tous les ordres, sauf le dernier, aient exactement 2 entrées.
+    L'ordre maximal peut rester incomplet (1 seule entrée).
+    La fonction modifie directement la liste 'cdm' (les dictionnaires sont modifiés in place)
+    et la retourne une fois les ajustements terminés.
+    """
+    modification = True
+    while modification:
+        modification = False
+        # Regrouper les CDM par ordre de passage
+        groups = {}
+        for emp in cdm:
+            order = emp["ordre_passage"]
+            groups.setdefault(order, []).append(emp)
+        
+        # Obtenir les ordres existants triés (les ordres non utilisés apparaîtront comme 0)
+        sorted_orders = sorted(groups.keys())
+        
+        for order in sorted_orders:
+            if len(groups[order]) < 2:
+                next_order = order + 1
+                # Si le groupe précédent existe et contient exactement 2 CDM
+                if next_order in groups and len(groups[next_order]) == 2:
+                    # Sélectionner aléatoirement l'un des deux du groupe précédent
+                    chosen = random.choice(groups[next_order])
+                    # Retirer le CDM choisi du groupe précédent
+                    groups[next_order].remove(chosen)
+                    # Ajouter le CDM choisi au groupe courant
+                    groups[order].append(chosen)
+                    # Mettre à jour son ordre_passage
+                    chosen["ordre_passage"] = order
+                    modification = True
+        # Si une modification a eu lieu, la boucle se répète pour vérifier de nouveau l'ensemble
+    return cdm
+
 
 def select_cdm(cdm):
-    # 🔎 Vérifier si tous les CDM ont un ordre de passage défini (> 0)
+    
+    # 🔎 Vérifier si tous les CDM ont un ordre de passage défini (> 0) et si tous les CDM sont bien par binôme (dans le cas d'une suppression)
     if all(emp["ordre_passage"] > 0 for emp in cdm) and all(emp["selection_count"] == 1 for emp in cdm):
         # 🔄 Réinitialiser toutes les sélections à 0
         max_order_selected = 0
         for emp in cdm:
             emp["selection_count"] = 0
+        cdm = verify_and_adjust_binomes(cdm)
     
     if all(emp["ordre_passage"] > 0 for emp in cdm):   
 
@@ -373,7 +413,7 @@ def delete_cdm_by_name(cdm, nom):
     cursor = conn.cursor()
 
     # Récupérer l'ordre de passage du CDM correspondant au nom
-    cursor.execute("SELECT ordre_passage FROM cdm WHERE nom = ?", (nom,))
+    cursor.execute("SELECT ordre_passage, selection_count FROM cdm WHERE nom = ?", (nom,))
     odp = cursor.fetchone()
     
     if odp is None:
@@ -382,23 +422,25 @@ def delete_cdm_by_name(cdm, nom):
         return None
     
     ordre_passage = odp[0]
-    binome = [emp for emp in cdm if emp["ordre_passage"] == ordre_passage + 1 ]
+    selection = odp[1]
     binome_decale = None
 
-    while ordre_passage <= max(emp["ordre_passage"] for emp in cdm):
-            binome_next = [emp for emp in cdm if emp["ordre_passage"] == ordre_passage]
+    if selection == 0 and ordre_passage != 0 : 
 
-            if binome_decale is not None :
-                binome_decale["ordre_passage"] -= 1
+        while ordre_passage <= max(emp["ordre_passage"] for emp in cdm):
+                binome_next = [emp for emp in cdm if emp["ordre_passage"] == ordre_passage + 1]
 
-            if len(binome_next) != 2:
-                break  # Fin du décalage
+                if binome_decale is not None :
+                    binome_decale["ordre_passage"] -= 1
 
-            selected_binome = random.choice(binome_next)
-            non_selected_binome = [emp for emp in binome_next if emp != selected_binome][0]
-            binome_decale = non_selected_binome
+                if len(binome_next) != 2:
+                    break  # Fin du décalage
 
-            ordre_passage += 1
+                selected_binome = random.choice(binome_next)
+                non_selected_binome = [emp for emp in binome_next if emp != selected_binome][0]
+                binome_decale = non_selected_binome
+
+                ordre_passage += 1
     
     save_data(cdm)
 
