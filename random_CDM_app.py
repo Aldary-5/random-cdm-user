@@ -50,7 +50,6 @@ def insert_initial_data():
         {"nom": "MALE Martin", "grade": "CS", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
         {"nom": "KARCZEWSKI Matta", "grade": "CS", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
         {"nom": "CRIBIER Thibaut", "grade": "CS", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
-        {"nom": "BELORGEY Marie", "grade": "M", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
         {"nom": "LEQUEUX Nicolas", "grade": "M", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
         {"nom": "MOUMEN Assâad", "grade": "M", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
         {"nom": "ROISIN Oscar", "grade": "CS", "poids": 4, "selection_count": 0, "ordre_passage": 0, "squad_number": 5},
