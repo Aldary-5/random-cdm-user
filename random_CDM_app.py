@@ -3,7 +3,7 @@ import random
 import sqlite3
 import os
 
-st.title("🎈 Binôme de CDM pour le mois (DEMO)")
+st.title("🎈 Binôme de CDM pour le mois")
 
 # --- Fonctions existantes pour la gestion de la base ---
 
@@ -406,12 +406,12 @@ with col1:
         cdm_data = load_data()
         selected_people = select_cdm(cdm_data)
         for person in selected_people:
-            st.write(f"**{person['nom']}** (Ordre de passage: {person['ordre_passage']})")
-    if st.button("Afficher l'état de la base de données"):
-        show_db_data()
-    # Bouton pour réinitialiser la base de données
-    if st.button("🔄 Réinitialiser la base de données"):
-        reset_db()
+            st.write(f"**{person['nom']}")
+    # if st.button("Afficher l'état de la base de données"):
+    #     show_db_data()
+    # # Bouton pour réinitialiser la base de données
+    # if st.button("🔄 Réinitialiser la base de données"):
+    #     reset_db()
 
 # Fonction pour supprimer un CDM
 def delete_cdm_by_name(cdm, nom):
@@ -479,7 +479,7 @@ with col2:
             if name_input and grade_input:
                 new_emp = add_new_cdm(name_input, grade_input)
                 ordre_passage = next((emp["ordre_passage"] for emp in new_emp if emp["nom"] == name_input), "inconnu")
-                st.success(f"CDM {name_input} ajouté avec ordre de passage {ordre_passage}")
+                st.success(f"CDM {name_input} ajouté")
                 # Une fois l'ajout effectué, on peut masquer le formulaire
                 st.session_state.show_add_form = False
             else:
