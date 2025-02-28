@@ -214,7 +214,7 @@ def select_cdm(cdm):
         cdm = verify_and_adjust_binomes(cdm)
     
     if all(emp["ordre_passage"] > 0 for emp in cdm):   
-
+        cdm = verify_and_adjust_binomes(cdm)
         selected_once = [emp for emp in cdm if emp["selection_count"] == 1]
 
         if len(selected_once) != 0:
