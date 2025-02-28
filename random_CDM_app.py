@@ -3,7 +3,7 @@ import random
 import sqlite3
 import os
 
-st.title("🎈 Binôme de CDM pour le mois (test)")
+st.title("🎈 Binôme de CDM pour le mois (DEMO)")
 
 # --- Fonctions existantes pour la gestion de la base ---
 
