@@ -115,13 +115,15 @@ def save_data(data):
     conn.close()
 
 def decaler_passage(cdm, last_cdm) :
+        max_order_selected = max(emp["ordre_passage"] for emp in cdm)
     # 🔄 Réinitialiser toutes les sélections à 0
+        selected_cdm = []
+        last_cdm = last_cdm[0]
+        selected_cdm.append(last_cdm) # On l'ajoute directement
         for emp in cdm:
             emp["selection_count"] = 0
 
-        last_cdm = last_cdm[0]
-        last_cdm["selection_count"] += 1  # On l'ajoute directement
-        selected_cdm = [last_cdm]
+        last_cdm["selection_count"] += 1  # On incrémente sa sélection
 
         # 3️⃣ Sélectionner un binôme parmi ceux ayant l'ordre de passage 1
         binome_order_1 = [emp for emp in cdm if emp["ordre_passage"] == 1]
@@ -129,10 +131,9 @@ def decaler_passage(cdm, last_cdm) :
         if len(binome_order_1) != 2:
             raise ValueError("Erreur : il doit y avoir exactement 2 noms avec ordre de passage = 1.")
 
-        selected_binome = random.choice(binome_order_1)
-        selected_binome["selection_count"] += 1  # Il est sélectionné avec last_cdm
-        selected_binome["ordre_passage"] = 1  # Son ordre reste 1
-        selected_cdm.append(selected_binome)
+        selected_binome_1 = random.choice(binome_order_1)
+        selected_binome_1["selection_count"] += 1  # Il est sélectionné avec last_cdm
+        selected_cdm.append(selected_binome_1)
 
 
         # remet le dernier nom sélectionné en 1er de la liste de sélection
@@ -141,7 +142,7 @@ def decaler_passage(cdm, last_cdm) :
         # 5️⃣ Décaler progressivement les ordres de passage des binômes suivants
         binome_decale = None
         current_order = 2
-        while True:
+        while True :
             binome_next = [emp for emp in cdm if emp["ordre_passage"] == current_order]
 
             if binome_decale is not None :
@@ -157,7 +158,7 @@ def decaler_passage(cdm, last_cdm) :
             current_order += 1
         
         # 4️⃣ L'autre membre du binôme sélectionné en premier voit son ordre de passage incrémenté
-        non_selected_binome_premier = [emp for emp in binome_order_1 if emp != selected_binome][0]
+        non_selected_binome_premier = [emp for emp in binome_order_1 if emp != selected_binome_1][0]
         non_selected_binome_premier["ordre_passage"] += 1
 
 
@@ -173,6 +174,7 @@ def verify_and_adjust_binomes(cdm):
     La fonction modifie directement la liste 'cdm' (les dictionnaires sont modifiés in place)
     et la retourne une fois les ajustements terminés.
     """
+    max_order = max(emp["ordre_passage"] for emp in cdm)
     modification = True
     while modification:
         modification = False
@@ -185,20 +187,22 @@ def verify_and_adjust_binomes(cdm):
         # Obtenir les ordres existants triés (les ordres non utilisés apparaîtront comme 0)
         sorted_orders = sorted(groups.keys())
         
-        for order in sorted_orders:
-            if len(groups[order]) < 2:
-                next_order = order + 1
-                # Si le groupe précédent existe et contient exactement 2 CDM
-                if next_order in groups and len(groups[next_order]) == 2:
-                    # Sélectionner aléatoirement l'un des deux du groupe précédent
-                    chosen = random.choice(groups[next_order])
-                    # Retirer le CDM choisi du groupe précédent
-                    groups[next_order].remove(chosen)
-                    # Ajouter le CDM choisi au groupe courant
-                    groups[order].append(chosen)
-                    # Mettre à jour son ordre_passage
-                    chosen["ordre_passage"] = order
-                    modification = True
+        for order in sorted_orders :
+            next_order = order + 1
+            while len(groups[order]) < 2 and order < max_order : 
+                next_order_bis = next_order
+                # Sélectionner aléatoirement l'un des deux du groupe précédent
+                chosen = random.choice(groups[next_order])
+                # Retirer le CDM choisi du groupe précédent
+                groups[next_order].remove(chosen)
+                # Ajouter le CDM choisi au groupe courant
+                groups[order].append(chosen)
+                # Mettre à jour son ordre_passage
+                chosen["ordre_passage"] = order
+                if len(groups[next_order_bis]) == 0 :
+                    next_order_bis += 1
+                modification = True
+            
         # Si une modification a eu lieu, la boucle se répète pour vérifier de nouveau l'ensemble
     return cdm
 
@@ -214,7 +218,7 @@ def select_cdm(cdm):
         cdm = verify_and_adjust_binomes(cdm)
     
     if all(emp["ordre_passage"] > 0 for emp in cdm):   
-        cdm = verify_and_adjust_binomes(cdm)
+        
         selected_once = [emp for emp in cdm if emp["selection_count"] == 1]
 
         if len(selected_once) != 0:
@@ -227,8 +231,11 @@ def select_cdm(cdm):
 
             # Si il n'y a qu'un seul nom pour le prochain ordre de passage
             if len(selected_cdm) == 1 : 
-                selected_cdm = decaler_passage(cdm, selected_cdm)
-                return selected_cdm 
+                if len(selected_cdm) == 1 :
+                # Appel de la fonction pour décaler les binômes 
+                    cdm = verify_and_adjust_binomes(cdm)
+                    selected_cdm_decaler = decaler_passage(cdm, selected_cdm)
+                    return selected_cdm_decaler
             
             else : 
                 if len(selected_cdm) != 2:
@@ -487,22 +494,28 @@ with col2:
         # Inverse l'état du formulaire (affiche s'il est masqué, le masque s'il est affiché)
         st.session_state.show_add_form_suppr = not st.session_state.show_add_form_suppr
 
-    # Afficher le formulaire uniquement si show_add_form est True
+    # Afficher le formulaire uniquement si show_add_form_suppr est True
     if st.session_state.show_add_form_suppr:
         # Message d'avertissement en rouge avec une icône warning
         st.markdown(
             "<span style='color: red; font-weight: bold;'>⚠️ Attention : la suppression bousculera tout l'ordre, soyez sûr avant de cliquer !</span>",
             unsafe_allow_html=True,
         )
+        # Charger les données pour extraire les noms
+        cdm_data = load_data()
+        names = [emp["nom"] for emp in cdm_data]
+        
         with st.form(key="add_employee_form_suppr"):
-            name_input = st.text_input("Nom du CDM")
+            # Utiliser une liste déroulante pour sélectionner le nom
+            name_input = st.selectbox("Nom du CDM", options=names)
             submit_button = st.form_submit_button(label="Supprimer le CDM")
+        
         if submit_button:
-            if name_input :
-                cdm_data = load_data()
+            if name_input:
                 delete_cdm_by_name(cdm_data, name_input)
                 st.success(f"{name_input} a été supprimé(e) de la liste des CDM")
-                # Une fois l'ajout effectué, on peut masquer le formulaire
+                # Une fois la suppression effectuée, on peut masquer le formulaire
                 st.session_state.show_add_form_suppr = False
             else:
-                st.error("Veuillez remplir tous les champs.")
+                st.error("Veuillez sélectionner un CDM.")
+
